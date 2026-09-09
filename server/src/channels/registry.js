@@ -1,4 +1,5 @@
 import { MockChannelAdapter } from './mock.js';
+import { AiosellAdapter } from './aiosell.js';
 
 /**
  * The only place a channel implementation is named.
@@ -9,6 +10,7 @@ import { MockChannelAdapter } from './mock.js';
  * Nothing else in the platform needs to know the provider exists.
  */
 const ADAPTERS = {
+  aiosell: AiosellAdapter,
   mock: MockChannelAdapter,
 };
 

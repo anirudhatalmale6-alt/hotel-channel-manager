@@ -21,8 +21,26 @@ await conn.query(
 );
 await conn.query(`USE \`${config.db.database}\``);
 
-const sql = fs.readFileSync(path.resolve(__dirname, '../db/schema.sql'), 'utf8');
-await conn.query(sql);
+await conn.query(fs.readFileSync(path.resolve(__dirname, '../db/schema.sql'), 'utf8'));
+
+// Incremental migrations, applied in filename order. Each is written to be
+// safe to re-run so a partial deployment can simply be run again.
+const migDir = path.resolve(__dirname, '../db/migrations');
+if (fs.existsSync(migDir)) {
+  for (const file of fs.readdirSync(migDir).filter((f) => f.endsWith('.sql')).sort()) {
+    try {
+      await conn.query(fs.readFileSync(path.join(migDir, file), 'utf8'));
+      console.log(`  applied ${file}`);
+    } catch (err) {
+      // Already-applied columns/tables are not an error worth stopping for.
+      if (/Duplicate column|already exists|Duplicate key name/i.test(err.message)) {
+        console.log(`  skipped ${file} (already applied)`);
+      } else {
+        throw err;
+      }
+    }
+  }
+}
 
 const [tables] = await conn.query(
   `SELECT table_name FROM information_schema.tables WHERE table_schema = ? ORDER BY table_name`,
